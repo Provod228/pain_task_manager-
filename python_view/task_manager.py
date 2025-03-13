@@ -92,7 +92,18 @@ class SystemMetrics:
         
         # Загружаем DLL для мониторинга процессов
         try:
-            self.dll_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Dll2.dll")
+            if getattr(sys, 'frozen', False):
+                # Если запущено как exe (PyInstaller)
+                base_path = os.path.dirname(sys.executable)
+            else:
+                # Если запущено как Python скрипт
+                base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+            
+            self.dll_path = os.path.join(base_path, "Dll2.dll")
+            if not os.path.exists(self.dll_path):
+                print(f"DLL not found at {self.dll_path}")
+                raise FileNotFoundError(f"DLL not found at {self.dll_path}")
+                
             self.process_dll = ctypes.WinDLL(self.dll_path)
             
             # Определяем структуру ProcessInfo из DLL
@@ -112,7 +123,8 @@ class SystemMetrics:
             self.process_dll.GetProcessInfo.restype = ProcessInfoStruct
             self.ProcessInfoStruct = ProcessInfoStruct
             self.use_dll = True
-        except Exception:
+        except Exception as e:
+            print(f"Failed to load DLL: {e}")
             self.use_dll = False
         
     def _setup_performance_counters(self):
